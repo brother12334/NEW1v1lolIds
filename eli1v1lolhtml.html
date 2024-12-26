@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullscreen Game Authorization</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        #content {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: none;
+            background-color: #000;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #authStatus {
+            text-align: center;
+            z-index: 10000;
+        }
+
+        #watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            opacity: 0;
+            color: #ccc;
+            animation: fadeOut 3s forwards;
+            z-index: 10000;
+        }
+
+        #enterFullscreenBtn {
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            z-index: 10001;
+            margin-top: 20px;
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="watermark">yoyo's hacks</div>
+    <div id="authStatus">Checking authorization...</div>
+    <div id="content"></div>
+    <button id="enterFullscreenBtn">Enter Fullscreen</button>
+
+    <script>
+        const allowedIdsUrl = "https://starlit-kashata-520c12.netlify.app/allowed-ids.json";
+
+        // Generate a random UUID to uniquely identify the device
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                const r = (Math.random() * 16) | 0;
+                const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            });
+        }
+
+        // Get or create the user ID in localStorage using 'test1234' as the key
+        function getUserId() {
+            let userId = localStorage.getItem('test1234');
+            if (!userId) {
+                userId = generateUUID();
+                localStorage.setItem('test1234', userId);
+            }
+            return userId;
+        }
+
+        async function checkAuthorization() {
+            const userId = getUserId();
+            document.getElementById('authStatus').textContent = `Your ID: ${userId}`;
+
+            try {
+                const response = await fetch(allowedIdsUrl);
+                if (!response.ok) throw new Error("Failed to fetch allowed IDs.");
+
+                const allowedIds = await response.json();
+                if (allowedIds.allowedDevices.includes(userId)) {
+                    document.getElementById('authStatus').style.display = "none";
+                    document.getElementById('watermark').style.opacity = 0;
+                    loadGame();
+                } else {
+                    document.getElementById('authStatus').textContent = `Access Denied. Your ID: ${userId}`;
+                }
+            } catch (error) {
+                document.getElementById('authStatus').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function loadGame() {
+            const hexEncodedUrl = "687474703a2f2f6c6573736f6e73312e736974652f5f67616d65732f3176312d6c6f6c2f";
+            const decodedUrl = hexDecode(hexEncodedUrl);
+            if (decodedUrl) {
+                console.log("Decoded URL:", decodedUrl);
+                setTimeout(() => {
+                    const content = document.getElementById("content");
+                    content.innerHTML = `<iframe src="${decodedUrl}" allowfullscreen></iframe>`;
+                    content.style.display = "block";
+                }, 3000);
+            } else {
+                console.error("Error: Invalid decoded URL");
+            }
+        }
+
+        function hexDecode(hex) {
+            try {
+                let str = '';
+                for (let i = 0; i < hex.length; i += 2) {
+                    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+                }
+                return str;
+            } catch (e) {
+                console.error("Error decoding hex:", e);
+                return null;
+            }
+        }
+
+        function enterFullscreen() {
+            // Fullscreen request triggered by the button click on the main document
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.mozRequestFullScreen) { // Firefox
+                elem.mozRequestFullScreen();
+            } else if (elem.webkitRequestFullscreen) { // Chrome, Safari, Opera
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { // IE/Edge
+                elem.msRequestFullscreen();
+            }
+        }
+
+        document.getElementById("enterFullscreenBtn").addEventListener("click", () => {
+            enterFullscreen(); // Trigger fullscreen on button click
+            document.getElementById("enterFullscreenBtn").style.display = "none"; // Hide button after fullscreen is requested
+        });
+
+        window.onload = checkAuthorization;
+    </script>
+</body>
+</html>
